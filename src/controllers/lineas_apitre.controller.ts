@@ -3,13 +3,13 @@ import { getConnection, sql } from "../config/server";
 
 const findLineas = async (req: Request, res: Response) => {
   const pool = await getConnection();
-  if (pool === undefined)
-    return res.status(500).send({ error: "Error internal server" });
+  if (pool === undefined) return res.status(500).send({ error: "Error internal server" });
   const result = await pool.request().query("SELECT * FROM lineas_apitre");
   return res.status(200).send(result.recordset);
 };
 const findLinea = async ({ params }: Request, res: Response) => {
   const { id } = params;
+  if (!id) return res.status(400).send({ error: "Se requiere una ID" });
   try {
     const pool = await getConnection();
     if (pool === undefined)
@@ -32,9 +32,9 @@ const findLinea = async ({ params }: Request, res: Response) => {
   }
 };
 const createLinea = async ({ body }: Request, res: Response) => {
-  const { nombre } = body;
-  if (!nombre)
-    return res.status(400).send({ error: "El campo nombre es requerido" });
+  const { nombre, estado } = body;
+  if (!nombre || estado === null)
+    return res.status(400).send({ error: "Todos los campos son requeridos" });
   try {
     const pool = await getConnection();
     if (pool === undefined)
@@ -42,8 +42,9 @@ const createLinea = async ({ body }: Request, res: Response) => {
     await pool
       .request()
       .input("nombre", sql.VarChar, nombre)
+      .input("estado", sql.Bit, estado)
       .query(
-        "INSERT INTO lineas_apitre (nombre) VALUES (@nombre)"
+        "INSERT INTO lineas_apitre (nombre,estado) VALUES (@nombre,@estado)"
       );
     return res.status(200).send({ message: "Creado existosamente" });
   } catch (error) {
@@ -53,10 +54,10 @@ const createLinea = async ({ body }: Request, res: Response) => {
 };
 const updateLinea = async ({ params, body }: Request, res: Response) => {
   const { id } = params;
-  const { nombre} = body;
+  const { nombre, estado } = body;
   if (!id) return res.status(400).send({ error: "Se requiere una ID" });
-  if (!nombre )
-  return res.status(400).send({ error: "El campo nombre es requerido" });
+  if (!nombre || estado === null)
+    return res.status(400).send({ error: "Todos los campos son requeridos" });
   try {
     const pool = await getConnection();
     if (pool === undefined)
@@ -65,8 +66,9 @@ const updateLinea = async ({ params, body }: Request, res: Response) => {
       .request()
       .input("id", sql.Int, id)
       .input("nombre", sql.VarChar, nombre)
+      .input("estado", sql.Bit, estado)
       .query(
-        "UPDATE lineas_apitre SET nombre = @nombre WHERE id = @id"
+        "UPDATE lineas_apitre SET nombre = @nombre, estado = @estado WHERE id = @id"
       );
     return res
       .status(200)

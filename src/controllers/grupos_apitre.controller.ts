@@ -3,28 +3,8 @@ import { getConnection, sql } from "../config/server";
 
 const findGrupos = async (req: Request, res: Response) => {
   const pool = await getConnection();
-  if (pool === undefined)
-    return res.status(500).send({ error: "Error internal server" });
+  if (pool === undefined) return res.status(500).send({ error: "Error internal server" });
   const result = await pool.request().query("SELECT * FROM grupos_apitre");
-  //   const result = await pool.request().query(`
-  //   SELECT
-  //     g.id AS grupos_apitre_id,
-  //     g.nombre,
-  //     g.director,
-  //     JSON_QUERY(
-  //         (
-  //             SELECT
-  //                 l.id AS lineas_apitre_id,
-  //                 l.nombre AS nombre,
-  //             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-  //         )
-  //     ) AS lineas_apitre
-  // FROM grupos_apitre g
-  // JOIN lineas_apitre l ON g.lineas_apitre_id = l.id;
-  //   `);
-  result.recordset.forEach((item) => {
-    item.docente_ap = JSON.parse(item.docente_ap);
-  });
   return res.status(200).send(result.recordset);
 };
 const findGrupo = async ({ params }: Request, res: Response) => {
@@ -35,30 +15,6 @@ const findGrupo = async ({ params }: Request, res: Response) => {
     if (pool === undefined)
       return res.status(500).send({ error: "Error internal server" });
     const result = await pool.request().input("id", sql.Int, id).query("SELECT * FROM grupos_apitre WHERE id = @id")
-    // const result =
-    //   await 
-    //     pool.request().input("id", sql.Int, id).query(`
-    //   SELECT
-    //   g.id AS grupos_apitre_id,
-    //   g.nombre,
-    //   g.director,
-    //   JSON_QUERY(
-    //       (
-    //           SELECT
-    //               l.id AS lineas_apitre_id,
-    //               l.nombre AS nombre,
-    //           FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-    //       )
-    //   ) AS lineas_apitre
-    //   FROM grupos_apitre g
-    //   JOIN lineas_apitre l ON g.lineas_apitre_id = l.id;
-    //   WHERE a.id = @id;
-    //   `);
-
-    result.recordset.forEach((item) => {
-      item.docente_ap = JSON.parse(item.docente_ap);
-    });
-
     return res
       .status(200)
       .send(
@@ -72,8 +28,8 @@ const findGrupo = async ({ params }: Request, res: Response) => {
   }
 };
 const createGrupo = async ({ body }: Request, res: Response) => {
-  const { nombre, director, lineas_apitre_id } = body;
-  if (!nombre || !director || !lineas_apitre_id) {
+  const { nombre, director, estado, lineas_apitre_id } = body;
+  if (!nombre || !director || !lineas_apitre_id || estado === null) {
     return res.status(400).send({ error: "Todos los campos son requeridos" });
   }
 
@@ -85,9 +41,10 @@ const createGrupo = async ({ body }: Request, res: Response) => {
       .request()
       .input("nombre", sql.VarChar, nombre)
       .input("director", sql.VarChar, director)
+      .input("estado", sql.Bit, estado)
       .input("lineas_apitre_id", sql.Int, lineas_apitre_id)
       .query(
-        "INSERT INTO grupos_apitre (nombre,director,lineas_apitre_id) VALUES (@nombre,@director,@lineas_apitre_id)"
+        "INSERT INTO grupos_apitre (nombre,director,estado,lineas_apitre_id) VALUES (@nombre,@director,@estado,@lineas_apitre_id)"
       );
     return res.status(200).send({ message: "Creado existosamente" });
   } catch (error) {
@@ -97,9 +54,9 @@ const createGrupo = async ({ body }: Request, res: Response) => {
 };
 const updateGrupo = async ({ params, body }: Request, res: Response) => {
   const { id } = params;
-  const { nombre, director, lineas_apitre_id } = body;
+  const { nombre, director, estado, lineas_apitre_id } = body;
   if (!id) return res.status(400).send({ error: "Se requiere una ID" });
-  if (!nombre || !director || !lineas_apitre_id) {
+  if (!nombre || !director || !lineas_apitre_id || estado === null) {
     return res.status(400).send({ error: "Todos los campos son requeridos" });
   }
   try {
@@ -111,9 +68,10 @@ const updateGrupo = async ({ params, body }: Request, res: Response) => {
       .input("id", sql.Int, id)
       .input("nombre", sql.VarChar, nombre)
       .input("director", sql.VarChar, director)
+      .input("estado", sql.Bit, estado)
       .input("lineas_apitre_id", sql.Int, lineas_apitre_id)
       .query(
-        "UPDATE grupos_apitre SET nombre = @nombre, director = @director, lineas_apitre_id = @lineas_apitre_id WHERE ID = @id"
+        "UPDATE grupos_apitre SET nombre = @nombre, director = @director, estado = @estado, lineas_apitre_id = @lineas_apitre_id WHERE ID = @id"
       );
     return res
       .status(200)
